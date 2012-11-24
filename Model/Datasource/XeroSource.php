@@ -191,9 +191,16 @@ class XeroSource extends DataSource {
 		$response = $AccessToken->request($method, $uri, $params['request']['header'], $params, $this->sslRequestOptions());
 		$this->took = round((microtime(true) - $t) * 1000, 0);
 
+		// Token has expired - sleep for a second and then re-call
+		if ($response->code == XeroResponseCode::UNAUTHORIZED && $depth < 50) {
+			// is the problem because of the token?
+			sleep(1);
+			return $this->request($request, ++$depth);
+		}
+
 		// Rate limit exceeded - wait before requesting
 		// Only recurse 10 times?
-		if ($response->code == 503 && $depth < 10) {
+		if ($response->code == XeroResponseCode::RATE_LIMIT_EXCEEDED && $depth < 50) {
 			$timeStart = Cache::read($AccessToken->token, 'xero_api_limit');
 			$sleepTime = round(microtime(true) - $timeStart+60, 0);
 			CakeLog::write('xero_api', "Rate Limit Exceeded for {$AccessToken->token}. Waiting for {$sleepTime}s");
@@ -567,10 +574,13 @@ class XeroSource extends DataSource {
   	$credentials = $this->credentials();
   	$status = ($response->code != XeroResponseCode::SUCCESS) ? 'FAILED' : 'SUCCESS';
 
-		if ($response->code == XeroResponseCode::SUCCESS && is_array($response->body)) {
-			$entities = Set::classicExtract($response->body, '{n}.{s}.id');
-			$entities = implode(",", Set::flatten($entities));
-		} elseif ($response->code != XeroResponseCode::SUCCESS) {
+		if ($response->code == XeroResponseCode::SUCCESS) {
+			if (is_array($response->body)) {
+				$entities = Set::classicExtract($response->body, '{n}.{s}.id');
+				$entities = implode(",", Set::flatten($entities));
+			}
+		} else {
+			CakeLog::write('xero_api_error', "Error for {$AccessToken->token}.\n".print_r($response, true));
 			if (is_array($response->body) && isset($response->body['ApiException'])) {
 				$error = __("%s: %s (%s)", $response->body['ApiException']['Type'], $response->body['ApiException']['Message'], $response->body['ApiException']['ErrorNumber']);
 			} else {
