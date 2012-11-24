@@ -175,7 +175,7 @@ class XeroUpdateShell extends Shell {
 		}
 
 		CakeResque::enqueue('default', 'Xero.XeroUpdate', $args);
-		CakeLog::write('xero_update', __("Queued: %s (%s)", $company['Company']['name'], $company['Company']['id']));
+		CakeLog::write('xero_update', __("Queued: %s", $id));
 	}
 
 /**
