@@ -1,18 +1,18 @@
 <?php
 // Load database configuration
+
 App::uses('ConnectionManager', 'Model');
+
+$CERTPATH = App::pluginPath('Xero') . 'Config' .DS. 'Certificates' .DS;
 ConnectionManager::create('xero_partner', array(
     'datasource' => 'Xero.XeroSource',
-    // Consumer Oauth Tokens
-		'oauth_consumer_key' 	=> '',
-		'oauth_consumer_secret' => '',
-		// Necessary SSL certificates and Passphrase
+		'oauth_consumer_key' 	=> 'EHYT7ZNVSAKWF3UHYEKS2F3I7RLPI0',
+		'oauth_consumer_secret' => 'AINR0AVSOAT9HF64JMJ92QXMSK1PWU',
 		'ssl' => array(
-			'publicCert' => App::pluginPath('Xero') . 'Config' .DS. 'Certificates' .DS . 'partner.p12',
-			'privateCert' => App::pluginPath('Xero') . 'Config' .DS. 'Certificates' .DS . 'privatekey.pem',
-			'privateCertPass' => 'PASSPHRASE'
+			'publicCert' => $CERTPATH . 'partner.p12',
+			'privateCert' => $CERTPATH . 'privatekey.pem',
+			'privateCertPass' => '3tr4cDEB'
 		),
-		// Writes requests to the database, allowing us to track the last successful update
 		'logRequests' => true
 ));
 
@@ -20,7 +20,7 @@ ConnectionManager::create('xero_partner', array(
 Cache::config('xero_api_limit', array(
     'engine' => 'File',
     'duration' => '+1 minute',
-    'path' => CACHE . 'xero',
+    'path' => CACHE,
     'prefix' => 'xero_api_limit_'
 ));
 
