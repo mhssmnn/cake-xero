@@ -45,6 +45,7 @@ class XeroCredentialsController extends XeroAppController {
 			$RequestToken->consumer->http->config['request']['uri'] = $uri;
 			$RequestToken->consumer->http->config['scheme'] = 'https';
 			$RequestToken->consumer->http->config['request']['header'] = array();
+			$RequestToken->consumer->http->config['headers'] = array();
 			$params = $RequestToken->consumer->http->config;
 
 			$AccessToken = $RequestToken->getAccessToken(array_merge($datasource->sslRequestOptions(), array('oauth_verifier' => $this->request->query['oauth_verifier'])), $params);

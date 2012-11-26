@@ -182,6 +182,10 @@ class XeroSource extends DataSource {
 		$uri = $AccessToken->consumer->http->url($request['uri']);
 		$params = $AccessToken->consumer->http->config;
 
+		if (!isset($params['request']['header'])) {
+			$params['request']['header'] = array();
+		}
+
 		// Check if we need to record the start
 		if (Cache::read($AccessToken->token, 'xero_api_limit') === false) {
 			Cache::write($AccessToken->token, microtime(true), 'xero_api_limit');
@@ -283,35 +287,17 @@ class XeroSource extends DataSource {
   		$request = array('uri' => array('path' => $request));
   	}
 		
-		$request = Set::merge($this->request, $request);
+		$request = Set::merge(
+  		$this->request, 
+  		array('ssl' => $this->sslRequestOptions()),
+  		$request
+  	);
 		$credentials = $this->credentials();
-		
-  	$options = array(
-			'uri' => $request['uri'],
-			'http_method' => $request['method'],
-			'signature_method' => $request['auth']['oauth_signature_method'],
-			'request_token_uri' => '/oauth/RequestToken',
-			'authorize_uri' => '/oauth/Authorize',
-			'access_token_uri' => '/oauth/AccessToken',
-		);
 
-		if (!empty($credentials['XeroCredential']['session_handle'])) {
-			$options['oauth_session_handle'] = $credentials['XeroCredential']['session_handle'];
-		} elseif (!empty($credentials['XeroCredential']['oauth_verifier'])) {
-			$options['oauth_verifier'] = $credentials['XeroCredential']['oauth_verifier'];
-		}
+		$socket = new CurlSocket($this->config);
+		$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret']);
 
-		$socket = new CurlSocket(compact('request'));
-		$socket->config['ssl'] = $this->config['ssl'];
-
-		$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret'], $options);
-
-		$AccessToken = new AccessToken($Consumer, $credentials['XeroCredential']['key'], $credentials['XeroCredential']['secret']);
-		if (!$AccessToken) {
-			throw new CakeException("Unable to create Access Token");
-		}
-
-  	return $AccessToken;
+  	return $Consumer->getAccessToken($request, $credentials);
   }
 
 /**
@@ -319,26 +305,13 @@ class XeroSource extends DataSource {
  * @return RequestToken $RequestToken
  */
   public function getRequestToken($oauth_callback) {
-  	$token = null;
-  	$request = Set::merge($this->request, array('uri' => array('path' => '/oauth/RequestToken')));
-		$options = array(
-			'uri' => $request['uri'],
-			'http_method' => $request['method'],
-			'signature_method' => $request['auth']['oauth_signature_method'],
-			'request_token_uri' => '/oauth/RequestToken',
-			'authorize_url' => 'https://api.xero.com/oauth/Authorize',
-			'access_token_uri' => '/oauth/AccessToken'
-		);
-		$config = array_merge(compact('request'), $this->config, array('headers' => array()));
-		$socket = new CurlSocket($config);
-		$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret'], $options);
-
-		$uri = $socket->url($config['request']['uri']);
-		$requestOptions = array_merge($this->sslRequestOptions(), compact('oauth_callback'));
-		
-		$token = $Consumer->tokenRequest('GET', $uri, $token, $requestOptions, $config);
-
-  	return new RequestToken($Consumer, $token['oauth_token'], $token['oauth_token_secret']);
+  	$request = Set::merge(
+  		$this->request, 
+  		array('ssl' => $this->sslRequestOptions())
+  	);
+		$socket = new CurlSocket($this->config);
+  	$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret']);
+  	return $Consumer->getRequestToken($request, $oauth_callback);
   }
 
 /**
@@ -346,18 +319,8 @@ class XeroSource extends DataSource {
  * Modifies the AccessToken passed in.
  */
   public function renewAccessToken(&$AccessToken) {
-  	$token = $this->getAccessToken($AccessToken->consumer->accessTokenPath());
-
-  	$config = $token->consumer->http->config;
-		$config['headers'] = array();
-
-		$uri = $token->consumer->http->url($config['request']['uri']);
-		$token = $token->consumer->tokenRequest('GET', $uri, $token, $this->sslRequestOptions(), $config);
-
-		// Make sure we got new tokens
-		if (!isset($token['oauth_token'], $token['oauth_token_secret'])) {
-			throw new CakeException("Unable to renew AccessToken");
-		}
+  	$token = $this->getAccessToken($AccessToken->consumer->accessTokenUrl());
+		$token = $token->consumer->renewAccessToken($token, $this->sslRequestOptions());
 
 		// Replace current AccessToken with new credentials
 		$AccessToken->token = $token['oauth_token'];
