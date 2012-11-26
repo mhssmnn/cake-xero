@@ -88,7 +88,7 @@ class XeroSource extends DataSource {
  *
  * @var array
  */
-	protected $credentials = null;
+	public $credentials = null;
 
 /**
  * Constructor
@@ -173,7 +173,7 @@ class XeroSource extends DataSource {
  */
   public function request($request, $depth = 0) {
     $method = strtoupper($request['method']);
-    $AccessToken = $this->_getAccessToken($request);
+    $AccessToken = $this->getAccessToken($request);
 
     if ($this->credentialsHaveExpired()) {
 			$this->renewAccessToken($AccessToken);
@@ -278,7 +278,7 @@ class XeroSource extends DataSource {
  * Creates an access token out of a request.
  * @return AccessToken $AccessToken
  */
-  protected function _getAccessToken($request = array()) {
+  public function getAccessToken($request = array()) {
   	if (is_string($request)) {
   		$request = array('uri' => array('path' => $request));
   	}
@@ -290,17 +290,21 @@ class XeroSource extends DataSource {
 			'uri' => $request['uri'],
 			'http_method' => $request['method'],
 			'signature_method' => $request['auth']['oauth_signature_method'],
-			'oauth_session_handle' => $credentials['XeroCredential']['session_handle'],
 			'request_token_uri' => '/oauth/RequestToken',
 			'authorize_uri' => '/oauth/Authorize',
 			'access_token_uri' => '/oauth/AccessToken',
 		);
 
+		if (!empty($credentials['XeroCredential']['session_handle'])) {
+			$options['oauth_session_handle'] = $credentials['XeroCredential']['session_handle'];
+		} elseif (!empty($credentials['XeroCredential']['oauth_verifier'])) {
+			$options['oauth_verifier'] = $credentials['XeroCredential']['oauth_verifier'];
+		}
+
 		$socket = new CurlSocket(compact('request'));
 		$socket->config['ssl'] = $this->config['ssl'];
 
-		$Consumer = new XeroConsumer($this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret'], $options);
-		$Consumer->http =& $socket;
+		$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret'], $options);
 
 		$AccessToken = new AccessToken($Consumer, $credentials['XeroCredential']['key'], $credentials['XeroCredential']['secret']);
 		if (!$AccessToken) {
@@ -308,6 +312,65 @@ class XeroSource extends DataSource {
 		}
 
   	return $AccessToken;
+  }
+
+/**
+ * Creates a request token out of a request.
+ * @return RequestToken $RequestToken
+ */
+  public function getRequestToken($oauth_callback) {
+  	$token = null;
+  	$request = Set::merge($this->request, array('uri' => array('path' => '/oauth/RequestToken')));
+		$options = array(
+			'uri' => $request['uri'],
+			'http_method' => $request['method'],
+			'signature_method' => $request['auth']['oauth_signature_method'],
+			'request_token_uri' => '/oauth/RequestToken',
+			'authorize_url' => 'https://api.xero.com/oauth/Authorize',
+			'access_token_uri' => '/oauth/AccessToken'
+		);
+		$config = array_merge(compact('request'), $this->config, array('headers' => array()));
+		$socket = new CurlSocket($config);
+		$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret'], $options);
+
+		$uri = $socket->url($config['request']['uri']);
+		$requestOptions = array_merge($this->sslRequestOptions(), compact('oauth_callback'));
+		
+		$token = $Consumer->tokenRequest('GET', $uri, $token, $requestOptions, $config);
+
+  	return new RequestToken($Consumer, $token['oauth_token'], $token['oauth_token_secret']);
+  }
+
+/**
+ * Renews the current AccessToken by requesting a renewal from Xero.
+ * Modifies the AccessToken passed in.
+ */
+  public function renewAccessToken(&$AccessToken) {
+  	$token = $this->getAccessToken($AccessToken->consumer->accessTokenPath());
+
+  	$config = $token->consumer->http->config;
+		$config['headers'] = array();
+
+		$uri = $token->consumer->http->url($config['request']['uri']);
+		$token = $token->consumer->tokenRequest('GET', $uri, $token, $this->sslRequestOptions(), $config);
+
+		// Make sure we got new tokens
+		if (!isset($token['oauth_token'], $token['oauth_token_secret'])) {
+			throw new CakeException("Unable to renew AccessToken");
+		}
+
+		// Replace current AccessToken with new credentials
+		$AccessToken->token = $token['oauth_token'];
+		$AccessToken->tokenSecret = $token['oauth_token_secret'];
+
+		// Save new credentials to the database
+		$credentials = $this->credentials();
+		$this->XeroCredential->save(array_merge($credentials['XeroCredential'], array(
+			'key' => $token['oauth_token'],
+			'secret' => $token['oauth_token_secret'],
+			'expires' => date('Y-m-d H:i:s', time() + $token['oauth_expires_in']),
+		)));
+		$this->credentials($credentials['XeroCredential']['id']);
   }
 
 /**
@@ -527,38 +590,6 @@ class XeroSource extends DataSource {
   public function credentialsHaveExpired() {
   	$credentials = $this->credentials();
   	return ( strtotime($credentials['XeroCredential']['expires']) < time() );
-  }
-
-/**
- * Renews the current AccessToken by requesting a renewal from Xero.
- * Modifies the AccessToken passed in.
- */
-  public function renewAccessToken(&$AccessToken) {
-  	$token = $this->_getAccessToken($AccessToken->consumer->accessTokenPath());
-
-  	$config = $token->consumer->http->config;
-		$config['headers'] = array();
-
-		$uri = $token->consumer->http->url($config['request']['uri']);
-		$token = $token->consumer->tokenRequest('GET', $uri, $token, $this->sslRequestOptions(), $config);
-
-		// Make sure we got new tokens
-		if (!isset($token['oauth_token'], $token['oauth_token_secret'])) {
-			throw new CakeException("Unable to renew AccessToken");
-		}
-
-		// Replace current AccessToken with new credentials
-		$AccessToken->token = $token['oauth_token'];
-		$AccessToken->tokenSecret = $token['oauth_token_secret'];
-
-		// Save new credentials to the database
-		$credentials = $this->credentials();
-		$this->XeroCredential->save(array_merge($credentials['XeroCredential'], array(
-			'key' => $token['oauth_token'],
-			'secret' => $token['oauth_token_secret'],
-			'expires' => date('Y-m-d H:i:s', time() + $token['oauth_expires_in']),
-		)));
-		$this->credentials($credentials['XeroCredential']['id']);
   }
 
 /**
