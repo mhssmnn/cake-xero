@@ -58,63 +58,11 @@ class XeroCredentialsController extends XeroAppController {
 				'session_handle' => $AccessToken->params['oauth_session_handle'],
 				'expires' => date('Y-m-d H:i:s', time() + $AccessToken->params['oauth_expires_in']),
 			));
-			
-		}
-	}
-
-	function add() {
-		$oAuthToken = $this->request->query['oauth_token'];
-		$oAuthVerifier = $this->request->query['oauth_verifier'];
-		pr($this->request); die;
-
-		$this->layout = 'register';
-		$this->set('loadContacts', false);
-		
-		// if coming back from xero then add the task to the 
-		// page and wait for call back
-		$this->loadModel('Xero.XeroCredential');
-		$config = $this->XeroCredential->asConfig(AuthComponent::user('company_id'));
-CakeLog::write('xero', 'XUC->add, config = ' . var_export($config, 1));
-		
-		if (!empty($config)) {
-			$this->loadModel('Xero.XeroOrganisation');
-			
-			$Xero = $this->XeroAuth->getDatasource();
-			$Xero->config = array_merge(&$this->XeroAuth->getDatasource()->config, $config);
-			
-			// if have just added the organisation, then
-			// get the base currency
-			$organisation = $this->XeroOrganisation->find('first');
-			
-			if ($organisation) {
-				$this->loadModel('Setting');
-				$currency = $this->Setting->findByCompanyIdAndName(AuthComponent::user('company_id'), 'Currency');
-				
-				if (empty($currency)) {
-					$this->Setting->save(array(
-						'name' => 'Currency', 
-						'company_id' => AuthComponent::user('company_id'),
-						'value'=>$organisation['Organisation']['base_currency']
-					));
-				}
-				
-				$this->set('loadContacts', true);
-			} else {
-				throw new InternalErrorException("Couldn't create the connection with Xero.");
-			}
 		}
 	}
 	
-	function reauthenticate() {
-		$this->layout = 'register';
-		
-		// if coming back from xero then add the task to the 
-		// page and wait for call back
-		App::import('Model', 'Xero.XeroCredential');
-		$XeroCredential = new XeroCredential();
-		
-		$XeroCredential->deleteAll(array('company_id' => $this->Auth->user('company_id')), false);
-		
+	function reauthorise($organisation_id) {
+		$this->XeroCredential->deleteAll(array('organisation_id' => $organisation_id), false);
 		$this->redirect(array('action' => 'add'));
 	}
 }
