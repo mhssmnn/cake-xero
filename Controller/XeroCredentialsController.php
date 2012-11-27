@@ -63,6 +63,6 @@ class XeroCredentialsController extends XeroAppController {
 	
 	function reauthorise($organisation_id) {
 		$this->XeroCredential->deleteAll(array('organisation_id' => $organisation_id), false);
-		$this->redirect(array('action' => 'add'));
+		$this->redirect(array('action' => 'authorise', $organisation_id));
 	}
 }
