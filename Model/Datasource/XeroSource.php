@@ -260,7 +260,7 @@ class XeroSource extends DataSource {
 			$response->body[$i] = array($entity => $response->body[$i]);
 		}
 
-		$underscorize = function($arr) use (&$underscorize, &$entity) {
+		$underscorize = function($arr, $entity) use (&$underscorize) {
 			$rarr = array();
 			$find = array("_i_d", "_u_t_c", Inflector::underscore($entity) . '_id');
 			$repl = array('_id', '_utc', 'id');
@@ -273,7 +273,7 @@ class XeroSource extends DataSource {
 			}
 			return $rarr;
 		};
-		$response->body = $underscorize($response->body);
+		$response->body = $underscorize($response->body, $entity);
 
   	return $response;
   }
