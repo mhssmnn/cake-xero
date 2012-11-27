@@ -30,7 +30,7 @@ class Xero extends DDMigration {
 					'modified' => array('type' => 'datetime', 'null' => true, 'default' => NULL),
 					'indexes' => array(
 						'PRIMARY' => array('column' => 'id', 'unique' => 1),
-						'company_id' => array('column' => 'company_id', 'unique' => 0),
+						'organisation_id' => array('column' => 'organisation_id', 'unique' => 0),
 					),
 					'tableParameters' => array('charset' => 'latin1', 'collate' => 'latin1_swedish_ci', 'engine' => 'MyISAM'),
 				),
@@ -45,7 +45,7 @@ class Xero extends DDMigration {
 					'modified' => array('type' => 'datetime', 'null' => true, 'default' => NULL),
 					'indexes' => array(
 						'PRIMARY' => array('column' => 'id', 'unique' => 1),
-						'organisation_id' => array('column' => 'company_id', 'unique' => 0),
+						'organisation_id' => array('column' => 'organisation_id', 'unique' => 0),
 					),
 					'tableParameters' => array('charset' => 'latin1', 'collate' => 'latin1_swedish_ci', 'engine' => 'MyISAM'),
 				),
