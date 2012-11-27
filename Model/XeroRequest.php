@@ -1,5 +1,7 @@
 <?php
 
+App::uses('XeroAppModel', 'Xero.Model');
+
 class XeroRequest extends XeroAppModel {
 
 	public $useDbConfig = 'default';
