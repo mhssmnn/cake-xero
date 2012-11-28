@@ -5,10 +5,20 @@ App::uses('HttpResponse', 'Network/Http');
 
 class XeroCredentialsController extends XeroAppController {
 
-	function authorise($organisation_id = null) {
+	
+	function beforeFilter() {
+		parent::beforeFilter();
+		$this->Auth->allow('authorise', 'create');
+	}
+
+	function authorise($organisation_id = null, $redirect = null) {
 		// Create a new company id if none exists
 		if ($organisation_id === null) {
 			$organisation_id = String::uuid();
+		}
+
+		if ($redirect !== null) {
+			$this->Session->write('Xero.redirect_after_authorise', base64_decode($redirect));
 		}
 
 		$oauth_callback = Router::url(array('action' => 'create'), true);
@@ -58,11 +68,15 @@ class XeroCredentialsController extends XeroAppController {
 				'session_handle' => $AccessToken->params['oauth_session_handle'],
 				'expires' => date('Y-m-d H:i:s', time() + $AccessToken->params['oauth_expires_in']),
 			));
+
+			if ($this->Session->check('Xero.redirect_after_authorise')) {
+				$this->redirect($this->Session->read('Xero.redirect_after_authorise'));
+			}
 		}
 	}
 	
-	function reauthorise($organisation_id) {
+	function reauthorise($organisation_id, $redirect = null) {
 		$this->XeroCredential->deleteAll(array('organisation_id' => $organisation_id), false);
-		$this->redirect(array('action' => 'authorise', $organisation_id));
+		$this->redirect(array('action' => 'authorise', $organisation_id, $redirect));
 	}
 }
