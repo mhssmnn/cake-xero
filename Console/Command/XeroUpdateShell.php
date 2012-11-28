@@ -154,6 +154,11 @@ class XeroUpdateShell extends Shell {
 			'conditions' => $conditions
 		));
 
+		if (!$organisations && isset($this->params['organisation']) && $this->params['organisation']) {
+			$this->_organisation = array('Organisation' => array('id' => $this->params['organisation']));
+			return array($this->_organisation);
+		}
+
 		return $organisations;
 	}
 
