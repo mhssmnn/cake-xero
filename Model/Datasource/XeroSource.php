@@ -366,7 +366,15 @@ class XeroSource extends DataSource {
  * @return array $request The formatted request array
  */
   protected function _buildRequestUri($request, &$queryData, Model $model) {
-		if (isset($model->endpoint)) {
+  	if (!isset($model->localModel)) {
+			$model->localModel = str_replace("Xero", "", $model->alias);
+		}
+
+		if (!isset($model->endpoint)) {
+			$model->endpoint = Inflector::pluralize($model->localModel);
+		}
+
+		if (!empty($model->endpoint)) {
 			$request['uri']['path'] = 'api.xro/2.0/' . $model->endpoint;
 		} else {
 			throw new CakeException("Missing endpoint declaration (".get_class($model)."::endpoint).");
