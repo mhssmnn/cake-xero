@@ -8,22 +8,23 @@ class XeroRequest extends XeroAppModel {
 
   public $order = array('XeroRequest.modified' => 'desc');
 
-	public function lastSuccess($company_id, $endpoint, $query) {
-		if (strpos('api.xro/2.0/', $endpoint) !== 0) {
-			$endpoint = 'api.xro/2.0/'.$endpoint;
-		}
-		$result = $this->find('first', array(
-			'fields' => array('created'),
-			'conditions' => array(
-				'status' => 'SUCCESS', 
-				'entities !=' => null,
-				'endpoint' => $endpoint,
-				'query' => $query
-			)
-		));
+	public function lastSuccess($company_id, $endpoint = null, $query = null) {
+		$conditions = array('status' => 'SUCCESS', 'entities !=' => null);
 
+		if ($endpoint !== null) {
+			if (strpos('api.xro/2.0/', $endpoint) !== 0) {
+				$endpoint = 'api.xro/2.0/'.$endpoint;
+			}
+			$conditions += compact('endpoint');
+		}
+
+		if ($query !== null) {
+			$conditions += compact('query');
+		}
+
+		$result = $this->find('first', array( 'fields' => array('created'), 'conditions' => $conditions ));
 		if ($result) {
-			return gmdate('Y-m-d H:i:s', strtotime($result));
+			return gmdate('Y-m-d H:i:s', strtotime($result['XeroRequest']['created']));
 		}
 		return false;
 	}
