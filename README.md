@@ -17,12 +17,13 @@ The master branch has the following requirements:
 * Ensure the plugin is loaded in `app/Config/bootstrap.php` by calling `CakePlugin::load(array('Xero' => array('bootstrap' => true)));`
 * `Console/cake schema create -p Xero`
 * Or `Console/cake Migrations.migration run all -p Xero` if you are using the [Migrations](https://github.com/CakeDC/migrations) plugin
+* Copy your SSL certificates into `app/Plugin/Xero/Config/Certificates` and setup the bootstrap.php configuration to point to them. 
 
 
 ## Install Dependencies
 
-* Install [CakeResque](https://github.com/kamisama/Cake-Resque)
-* Install [OauthLib](https://github.com/CakeDC/oauth_lib)
+* Clone [CakeResque](https://github.com/kamisama/Cake-Resque) into `app/Plugin/CakeResque` and run through the installation instructions.
+* Clone [OauthLib](https://github.com/CakeDC/oauth_lib) into `app/Plugins/OauthLib`
 
 ## Contributing
 
