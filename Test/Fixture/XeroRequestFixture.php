@@ -24,4 +24,62 @@ class XeroRequestFixture extends CakeTestFixture {
 		'tableParameters' => array('charset' => 'latin1', 'collate' => 'latin1_swedish_ci', 'engine' => 'MyISAM')
 	);
 
+	var $records = array(
+		array(
+			'id' => 'contacts_only_request',
+			'organisation_id' => 'uptodate_org',
+			'status' => 'SUCCESS',
+			'endpoint' => 'api.xro/2.0/Contacts',
+			'query' => '',
+			'entities' => 'cid1,cid2,cid3',
+			'error' => '',
+			'created' => '2012-03-14 09:00:00',
+			'modified' => '2012-03-14 09:00:00'
+		),
+		array(
+			'id' => 'invoices_only_request',
+			'organisation_id' => 'uptodate_org',
+			'status' => 'SUCCESS',
+			'endpoint' => 'api.xro/2.0/Invoices',
+			'query' => '(Type == "ACCREC")',
+			'entities' => 'iid1,iid2,iid3',
+			'error' => '',
+			'created' => '2012-03-13 09:00:00',
+			'modified' => '2012-03-13 09:00:00'
+		),
+		array(
+			'id' => 'single_invoice_only_request',
+			'organisation_id' => 'uptodate_org',
+			'status' => 'SUCCESS',
+			'endpoint' => 'api.xro/2.0/Invoices/INV-0123',
+			'query' => '(Type == "ACCREC")',
+			'entities' => 'INV-0123',
+			'error' => '',
+			'created' => '2012-03-14 09:00:00',
+			'modified' => '2012-03-14 09:00:00'
+		),
+		array(
+			'id' => 'credit_notes_only_request',
+			'organisation_id' => 'uptodate_org',
+			'status' => 'SUCCESS',
+			'endpoint' => 'api.xro/2.0/CreditNotes',
+			'query' => '',
+			'entities' => 'cnid1,cnid2,cnid3',
+			'error' => '',
+			'created' => '2012-03-15 09:00:00',
+			'modified' => '2012-03-15 09:00:00'
+		),
+		array(
+			'id' => 'invoices_only_failed_request',
+			'organisation_id' => 'uptodate_org',
+			'status' => 'FAILED',
+			'endpoint' => 'api.xro/2.0/Invoices',
+			'query' => '(Type == "ACCREC")',
+			'entities' => '',
+			'error' => 'ApiMethodNotImplementedException: The Api Method called is not implemented (20)',
+			'created' => '2012-03-16 09:00:00',
+			'modified' => '2012-03-16 09:00:00'
+		),
+	);
+
 }

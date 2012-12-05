@@ -8,8 +8,8 @@ class XeroRequest extends XeroAppModel {
 
   public $order = array('XeroRequest.modified' => 'desc');
 
-	public function lastSuccess($company_id, $endpoint = null, $query = null) {
-		$conditions = array('status' => 'SUCCESS', 'entities !=' => null);
+	public function lastSuccess($organisation_id, $endpoint = null, $query = null) {
+		$conditions = array('organisation_id' => $organisation_id, 'status' => 'SUCCESS', 'entities !=' => null);
 
 		if ($endpoint !== null) {
 			if (strpos('api.xro/2.0/', $endpoint) !== 0) {

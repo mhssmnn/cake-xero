@@ -127,24 +127,24 @@ class XeroUpdateShell extends Shell {
 /**
  * Gets a list of ACTIVE organisations, filtered by the optional
  * organisation parameter.
- * Uses the Configured OrganisationModel to determine the local 
+ * Uses the Configured Organisation.Model to determine the local 
  * model that stores the organisations.
  *
  * @return array Names and Ids of the organisations to update.
  */
-	private function findOrganisations() {
+	public function findOrganisations() {
 		// Bind local organisation on the fly
 		if (!isset($this->XeroOrganisation->Organisation)) {
 			$this->XeroOrganisation->bindModel(array('hasOne' => array(
 				'Organisation' => array(
-					'className' => Configure::read('Xero.OrganisationModel')
+					'className' => Configure::read('Xero.Organisation.Model')
 				)
 			)));
 			$Organisation =& $this->XeroOrganisation->Organisation;
 		}
 		
 		$Organisation->contain(array());
-		$conditions = array('status' => 'ACTIVE');
+		$conditions = (array) Configure::read('Xero.Organisation.Filter');
 		if (isset($this->params['organisation']) && $this->params['organisation']) {
 			$conditions += array('id' => $this->params['organisation']);
 		}

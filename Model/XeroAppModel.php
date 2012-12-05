@@ -91,7 +91,7 @@ class XeroAppModel extends AppModel {
 		if (class_exists($this->localModel)) {
 			$model = new $this->localModel;
 			foreach ($entities as $entity) {
-				$localOrgForeignKey = Inflector::underscore(Configure::read('Xero.OrganisationModel')).'_id';
+				$localOrgForeignKey = Inflector::underscore(Configure::read('Xero.Organisation.Model')).'_id';
 				$entity[$this->localModel][$localOrgForeignKey] = $organisation_id;
 
 				if (method_exists($model, 'beforeXeroSave')) {

@@ -26,5 +26,8 @@ Cache::config('xero_api_limit', array(
 
 // Write configuration data
 Configure::write('Xero', array(
-	'OrganisationModel' => 'Company'
+	'Organisation' => array(
+		'Model' => 'Company',
+		'Filter' => array('status' => 'ACTIVE')
+	)
 ));
