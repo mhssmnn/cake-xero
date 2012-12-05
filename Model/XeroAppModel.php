@@ -1,5 +1,7 @@
 <?php
 
+App::uses('AppModel', 'Model');
+
 class XeroAppModel extends AppModel {
   public $useDbConfig = 'xero_partner';
 

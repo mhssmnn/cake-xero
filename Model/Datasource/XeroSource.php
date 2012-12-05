@@ -97,7 +97,7 @@ class XeroSource extends DataSource {
  * @throws MissingConnectionException when a connection cannot be made.
  */
 	public function __construct($config = null) {
-		$config = array_merge($config, (array) Configure::read('Xero'));
+		$config = array_merge((array)$config, (array) Configure::read('Xero'));
 		parent::__construct($config);
 	}
 
@@ -139,9 +139,9 @@ class XeroSource extends DataSource {
  * listSources() is for caching. Will implement caching in own way 
  * because of Xero as Datasource. So just ``return null``.
  */
-  public function listSources($data = null) {
-      return null;
-  }
+	public function listSources($data = null) {
+			return null;
+	}
 
 /**
  * Tells the model your schema for ``Model::save()``.
@@ -150,9 +150,9 @@ class XeroSource extends DataSource {
  * datasource. If this is your case then set a ``schema`` property on your
  * models and simply return ``$model->schema`` here instead.
  */
-  public function describe($model) {
-      return $model->_schema;
-  }
+	public function describe($model) {
+			return $model->_schema;
+	}
 
 /**
  * calculate() is for determining how we will count the records and is
@@ -163,19 +163,19 @@ class XeroSource extends DataSource {
  * return the string 'COUNT' and check for it in ``read()`` where
  * ``$data['fields'] == 'COUNT'``.
  */
-  public function calculate(Model $model, $func, $params = array()) {
-      return 'COUNT';
-  }
+	public function calculate(Model $model, $func, $params = array()) {
+			return 'COUNT';
+	}
 
 /**
  * Does the actual request
  * @return array Response body
  */
-  public function request($request, $depth = 0) {
-    $method = strtoupper($request['method']);
-    $AccessToken = $this->getAccessToken($request);
+	public function request($request, $depth = 0) {
+		$method = strtoupper($request['method']);
+		$AccessToken = $this->getAccessToken($request);
 
-    if ($this->credentialsHaveExpired()) {
+		if ($this->credentialsHaveExpired()) {
 			$this->renewAccessToken($AccessToken);
 		}
 
@@ -195,42 +195,55 @@ class XeroSource extends DataSource {
 		$response = $AccessToken->request($method, $uri, $params['request']['header'], $params, $this->sslRequestOptions());
 		$this->took = round((microtime(true) - $t) * 1000, 0);
 
-		// Token has expired - sleep for a second and then re-call
-		if ($response->code == XeroResponseCode::UNAUTHORIZED && $depth < 50) {
-			// is the problem because of the token?
-			sleep(1);
-			return $this->request($request, ++$depth);
+		switch ($response->code) {
+			case XeroResponseCode::BAD_REQUEST: // Request was not valid
+					$response->body = @Xml::toArray(@Xml::build($response->body));
+			break;
+			case XeroResponseCode::UNAUTHORIZED: // Usually because token has expired
+					if ($depth < 50) {
+						sleep(1);
+						return $this->request($request, ++$depth);
+					}
+			break;
+			case XeroResponseCode::FORBIDDEN:
+					throw new XeroSSLValidationException('The SSL certificate was rejected by Xero');
+			break;
+			case XeroResponseCode::NOT_FOUND:
+					// The resource you're looking for cannot be found
+			break;
+			case XeroResponseCode::NOT_IMPLEMENTED: // The method has not been implemented (e.g. POST Organisation)
+					$response->body = @Xml::toArray(@Xml::build($response->body));
+			break;
+			case XeroResponseCode::NOT_AVAILABLE:
+			case XeroResponseCode::RATE_LIMIT_EXCEEDED:
+					if ($depth < 50 && $response->body != 'The Xero API is currently offline for maintenance') {
+						$timeStart = Cache::read($AccessToken->token, 'xero_api_limit');
+						$sleepTime = round(microtime(true) - $timeStart+60, 0);
+						CakeLog::write('xero_api', "Rate Limit Exceeded for {$AccessToken->token}. Waiting for {$sleepTime}s");
+						@time_sleep_until($timeStart+60);
+						return $this->request($request, ++$depth);
+					}
+			break;
+			case XeroResponseCode::SUCCESS:
+			default:
+					if (!empty($response->body)) {
+						$response->body = Xml::toArray(Xml::build($response->body));
+						$response = $this->_parseResponse($response);
+					}
 		}
 
-		// Rate limit exceeded - wait before requesting
-		// Only recurse 10 times?
-		if ($response->code == XeroResponseCode::RATE_LIMIT_EXCEEDED && $depth < 50) {
-			$timeStart = Cache::read($AccessToken->token, 'xero_api_limit');
-			$sleepTime = round(microtime(true) - $timeStart+60, 0);
-			CakeLog::write('xero_api', "Rate Limit Exceeded for {$AccessToken->token}. Waiting for {$sleepTime}s");
-
-			@time_sleep_until($timeStart+60);
-			return $this->request($request, ++$depth);
-		}
-
-		if ($response->code == XeroResponseCode::SUCCESS && !empty($response->body)) {
-			$response->body = Xml::toArray(Xml::build($response->body));
-			$response = $this->_parseResponse($response);
-		}
-
-		// Log request
-		$this->_logRequest($request, $response);
+		$this->logRequest($request, $response);
 
 		return $response->body;
-  }
+	}
 
 /**
  * Parses the response from Xero to provide a CakePHP structured
  * array.
  * @return array $response
  */
-  protected function _parseResponse(&$response) {
-  	if (!isset($response->body['Response'])) {
+	protected function _parseResponse(&$response) {
+		if (!isset($response->body['Response'])) {
 			return $response;	
 		}
 
@@ -275,51 +288,46 @@ class XeroSource extends DataSource {
 		};
 		$response->body = $underscorize($response->body, $entity);
 
-  	return $response;
-  }
+		return $response;
+	}
 
 /**
  * Creates an access token out of a request.
  * @return AccessToken $AccessToken
  */
-  public function getAccessToken($request = array()) {
-  	if (is_string($request)) {
-  		$request = array('uri' => array('path' => $request));
-  	}
+	public function getAccessToken($request = array()) {
+		if (is_string($request)) {
+			$request = array('uri' => array('path' => $request));
+		}
 		
 		$request = Set::merge(
-  		$this->request, 
-  		array('ssl' => $this->sslRequestOptions()),
-  		$request
-  	);
+			$this->request, 
+			array('ssl' => $this->sslRequestOptions()),
+			$request
+		);
 		$credentials = $this->credentials();
-
-		$socket = new CurlSocket($this->config);
-		$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret']);
-
-  	return $Consumer->getAccessToken($request, $credentials);
-  }
+		
+		return $this->consumer()->getAccessToken($request, $credentials);
+	}
 
 /**
  * Creates a request token out of a request.
  * @return RequestToken $RequestToken
  */
-  public function getRequestToken($oauth_callback) {
-  	$request = Set::merge(
-  		$this->request, 
-  		array('ssl' => $this->sslRequestOptions())
-  	);
-		$socket = new CurlSocket($this->config);
-  	$Consumer = new XeroConsumer($socket, $this->config['oauth_consumer_key'], $this->config['oauth_consumer_secret']);
-  	return $Consumer->getRequestToken($request, $oauth_callback);
-  }
+	public function getRequestToken($oauth_callback) {
+		$request = Set::merge(
+			$this->request, 
+			array('ssl' => $this->sslRequestOptions())
+		);
+		return $this->consumer()->getRequestToken($request, $oauth_callback);
+	}
 
 /**
  * Renews the current AccessToken by requesting a renewal from Xero.
  * Modifies the AccessToken passed in.
  */
-  public function renewAccessToken(&$AccessToken) {
-  	$token = $this->getAccessToken($AccessToken->consumer->accessTokenUrl());
+	public function renewAccessToken(&$AccessToken) {
+		$token = $this->getAccessToken($AccessToken->consumer->accessTokenUrl());
 		$token = $token->consumer->renewAccessToken($token, $this->sslRequestOptions());
 
 		// Replace current AccessToken with new credentials
@@ -334,39 +342,62 @@ class XeroSource extends DataSource {
 			'expires' => date('Y-m-d H:i:s', time() + $token['oauth_expires_in']),
 		)));
 		$this->credentials($credentials['XeroCredential']['id']);
-  }
+	}
+
+/**
+ * To help with testing
+ *
+ * @param array $config Config array to be merged with $this->config
+ * @return CurlSocket
+ */
+	public function socket($config = array()) {
+		return new CurlSocket($config + $this->config);
+	}
+
+/**
+ * To help with testing
+ *
+ * @param array $config Config array to be merged with $this->config
+ * @return CurlSocket
+ */
+	public function consumer($socket = null, $oauth_consumer_key = null, $oauth_consumer_secret = null) {
+		$socket = $socket ?: $this->socket();
+		$oauth_consumer_key = $oauth_consumer_key ?: $this->config['oauth_consumer_key'];
+		$oauth_consumer_secret = $oauth_consumer_secret ?: $this->config['oauth_consumer_secret'];
+		return new XeroConsumer($socket, $oauth_consumer_key, $oauth_consumer_secret);
+	}
 
 /**
  * Implement the R in CRUD. Calls to ``Model::find()`` arrive here.
  */
-  public function read(Model $model, $queryData = array(), $recursive = null) {
-    /**
-     * Here we do the actual count as instructed by our calculate()
-     * method above. We could either check the remote source or some
-     * other way to get the record count. Here we'll simply return 1 so
-     * ``update()`` and ``delete()`` will assume the record exists.
-     */
-    if ($queryData['fields'] == 'COUNT') {
-        return array(array(array('count' => 1)));
-    }
+	public function read(Model $model, $queryData = array(), $recursive = null) {
+		/**
+		 * Here we do the actual count as instructed by our calculate()
+		 * method above. We could either check the remote source or some
+		 * other way to get the record count. Here we'll simply return 1 so
+		 * ``update()`` and ``delete()`` will assume the record exists.
+		 */
+		if ($queryData['fields'] == 'COUNT') {
+				return array(array(array('count' => 1)));
+		}
 
-    $request = $this->request;
-    if (isset($model->request)) {
-    	$request = array_merge_recursive($request, $model->request);
-    }
+		$request = $this->request;
+		if (isset($model->request)) {
+			$request = array_merge_recursive($request, $model->request);
+		}
 
-    $request = $this->_buildRequestUri($request, $queryData, $model);
+		$request = $this->_buildRequestUri($request, $queryData, $model);
 
-    return $this->request($request);
-  }
+		return $this->request($request);
+	}
 
 /**
  * Builds the request URI - appends specific Xero endpoint URL paths, filters
  * out special conditions that Xero handles differently.
  * @return array $request The formatted request array
  */
-  protected function _buildRequestUri($request, &$queryData, Model $model) {
-  	if (!isset($model->localModel)) {
+	protected function _buildRequestUri($request, &$queryData, Model $model) {
+		if (!isset($model->localModel)) {
 			$model->localModel = str_replace("Xero", "", $model->alias);
 		}
 
@@ -388,21 +419,21 @@ class XeroSource extends DataSource {
 				if (is_string($queryData['conditions']['id']) && !empty($queryData['conditions']['id'])) {
 					$request['uri']['path'] .= '/' . $queryData['conditions']['id'];
 				}
-	    	unset($queryData['conditions']['id']);
-	    }
-	    
-	    // Xero uses the If-Modified-Since header as a special filter
-	    if (isset($queryData['conditions']['modified_after'])) {
-	    	$request['header']['If-Modified-Since'] = $queryData['conditions']['modified_after'];
+				unset($queryData['conditions']['id']);
+			}
+			
+			// Xero uses the If-Modified-Since header as a special filter
+			if (isset($queryData['conditions']['modified_after'])) {
+				$request['header']['If-Modified-Since'] = $queryData['conditions']['modified_after'];
 				unset($queryData['conditions']['modified_after']);
-	    }
+			}
 
 		}
 
-  	$request['uri']['query'] = $this->_filterQuery($queryData, $model);
+		$request['uri']['query'] = $this->_filterQuery($queryData, $model);
 
 		return $request;
-  }
+	}
 
 /**
  * Will filter query options that do not work with the Xero API
@@ -410,15 +441,15 @@ class XeroSource extends DataSource {
  * Usually called from XeroSource::_buildRequestUri().
  * @return Array $query
  */
-  protected function _filterQuery($query, Model $model) {
-  	$base = array_fill_keys(array('conditions', 'order'), array());
-  	$query = array_intersect_key((array)$query, $base);
+	protected function _filterQuery($query, Model $model) {
+		$base = array_fill_keys(array('conditions', 'order'), array());
+		$query = array_intersect_key((array)$query, $base);
 
-    $query['where'] = $this->conditions($query['conditions']);
-  	unset($query['conditions']);
+		$query['where'] = $this->conditions($query['conditions']);
+		unset($query['conditions']);
 
-  	return $query;
-  }
+		return $query;
+	}
 
 /**
  * Creates a WHERE clause by parsing given conditions data.  If an array or string
@@ -558,23 +589,23 @@ class XeroSource extends DataSource {
  * Tests to see if the current credentials have expired.
  * @return Boolean
  */
-  public function credentialsHaveExpired() {
-  	$credentials = $this->credentials();
-  	return ( strtotime($credentials['XeroCredential']['expires']) < time() );
-  }
+	public function credentialsHaveExpired() {
+		$credentials = $this->credentials();
+		return ( strtotime($credentials['XeroCredential']['expires']) < time() );
+	}
 
 /**
  * Logs the request in the local database.
  * Can be used for a modified_after date based on entity type.
  */
-  private function _logRequest($request, $response) {
-  	if (!$this->config['logRequests']) {
-  		return;
-  	}
-  	
-  	$error = $entities = '';
-  	$credentials = $this->credentials();
-  	$status = ($response->code != XeroResponseCode::SUCCESS) ? 'FAILED' : 'SUCCESS';
+	public function logRequest($request, $response) {
+		if (!$this->config['logRequests']) {
+			return;
+		}
+		
+		$error = $entities = '';
+		$credentials = $this->credentials();
+		$status = ($response->code != XeroResponseCode::SUCCESS) ? 'FAILED' : 'SUCCESS';
 
 		if ($response->code == XeroResponseCode::SUCCESS) {
 			if (is_array($response->body)) {
@@ -582,13 +613,11 @@ class XeroSource extends DataSource {
 				$entities = implode(",", Set::flatten($entities));
 			}
 		} else {
-			CakeLog::write('xero_api_error', "Error for {$AccessToken->token}.\n".print_r($response, true));
+			CakeLog::write('xero_api_error', "Error:\n".print_r($response, true));
 			if (is_array($response->body) && isset($response->body['ApiException'])) {
 				$error = __("%s: %s (%s)", $response->body['ApiException']['Type'], $response->body['ApiException']['Message'], $response->body['ApiException']['ErrorNumber']);
 			} else {
-				// SSL certificate error
-				$body = ($response->code == XeroResponseCode::FORBIDDEN) ? 'The client SSL certificate was not valid.' : $response->body;
-				$error = __("%s %s:\n%s", $response->code, $response->reasonPhrase, $body);
+				$error = __("%s %s:\n%s", $response->code, $response->reasonPhrase, $response->body);
 			}
 		}
 
@@ -604,7 +633,7 @@ class XeroSource extends DataSource {
 			'entities' => $entities,
 			'error' => $error
 		));
-  }
+	}
 
 }
 
@@ -616,5 +645,7 @@ class XeroResponseCode {
 	const FORBIDDEN = 403;
 	const NOT_FOUND = 404;
 	const NOT_IMPLEMENTED = 501;
+	const NOT_AVAILABLE = 503;
 	const RATE_LIMIT_EXCEEDED = 503;
 }
+class XeroSSLValidationException extends CakeException {}
