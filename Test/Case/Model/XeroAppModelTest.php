@@ -46,7 +46,8 @@ class XeroAppModelTestCase extends CakeTestCase {
  */
 	public function setUp() {
 		parent::setUp();
-		$this->XeroAppModel = ClassRegistry::init('Xero.XeroAppModel');
+		$this->AppModel = new TestAppModel;
+		$this->Model = new TestXeroContactModel;
 	}
 
 /**
@@ -55,27 +56,38 @@ class XeroAppModelTestCase extends CakeTestCase {
  * @return void
  */
 	public function tearDown() {
-		unset($this->XeroAppModel);
+		unset($this->AppModel);
+		unset($this->Model);
 
 		parent::tearDown();
-	}
-
-	public function testUpdate() {
-
 	}
 
 	public function testParseConditions() {
 
 	}
 
-/**
+	/**
 	 * Make sure the correct exceptions are thrown.
 	 * @expectedException XeroBadParametersException
 	 */
 	public function testUpdateExceptions() {
-		$this->XeroAppModel->update(123);
-		$this->XeroAppModel->update('string');
-		$this->XeroAppModel->update(array('a' => true));
+		$this->AppModel->update(123);
+		$this->AppModel->update('string');
+		$this->AppModel->update(array('a' => true));
+	}
+
+	public function testUpdate() {
+		$this->assertFalse($this->AppModel->update(null), 'Should return false if empty organisation is passed');
+
+		$xam = $this->Model;
+		$model = array(
+			'Organisation' => array(
+				'id' => 'test_user'
+			));
+		$entities = $xam->update($model);
+		$this->assertEqual($xam->localModel, 'Contact', "Localmodel is set to " . $xaml->localModel);
+		$this->assertEqual($xam->endpoint, 'Contacts');
+		var_dump($entities); die;
 	}
 
 	public function testSaveAsLocalModelSuccess() {
@@ -123,17 +135,4 @@ class XeroAppModelTestCase extends CakeTestCase {
 		$this->assertEqual($Datasource->credentials(), $credentials);
 	}
 
-	public function testUpdate() {
-		$this->assertFalse($this->XeroAppModel->update(null), 'Should return false if empty organisation is passed');
-
-		App::uses('User', 'Model');
-		$org = $this->User->find('first');
-		$org = array('Organisation' => array('id' => $org['User']['id']));
-
-		$xam = $this->XeroAppModel;
-		$entities = $xam->update($org);
-		$this->assertEqual($xam->localModel, 'Company', "Localmodel is set to " . $xaml->localModel);
-		$this->assertEqual($xam->endpoint, 'Companies');
-		var_dump($entities); die;
-	}
 }
