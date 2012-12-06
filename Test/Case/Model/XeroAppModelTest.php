@@ -46,8 +46,7 @@ class XeroAppModelTestCase extends CakeTestCase {
  */
 	public function setUp() {
 		parent::setUp();
-		$this->AppModel = new TestXeroAppModel;
-		$this->Model = new TestXeroContactModel;
+		$this->XeroAppModel = ClassRegistry::init('Xero.XeroAppModel');
 	}
 
 /**
@@ -56,8 +55,7 @@ class XeroAppModelTestCase extends CakeTestCase {
  * @return void
  */
 	public function tearDown() {
-		unset($this->AppModel);
-		unset($this->Model);
+		unset($this->XeroAppModel);
 
 		parent::tearDown();
 	}
@@ -68,6 +66,16 @@ class XeroAppModelTestCase extends CakeTestCase {
 
 	public function testParseConditions() {
 
+	}
+
+/**
+	 * Make sure the correct exceptions are thrown.
+	 * @expectedException XeroBadParametersException
+	 */
+	public function testUpdateExceptions() {
+		$this->XeroAppModel->update(123);
+		$this->XeroAppModel->update('string');
+		$this->XeroAppModel->update(array('a' => true));
 	}
 
 	public function testSaveAsLocalModelSuccess() {
@@ -113,5 +121,19 @@ class XeroAppModelTestCase extends CakeTestCase {
 
 		$this->AppModel->setDatasourceCredentialsFromOrganisationId($credentials['XeroCredentials']['organisation_id']);
 		$this->assertEqual($Datasource->credentials(), $credentials);
+	}
+
+	public function testUpdate() {
+		$this->assertFalse($this->XeroAppModel->update(null), 'Should return false if empty organisation is passed');
+
+		App::uses('User', 'Model');
+		$org = $this->User->find('first');
+		$org = array('Organisation' => array('id' => $org['User']['id']));
+
+		$xam = $this->XeroAppModel;
+		$entities = $xam->update($org);
+		$this->assertEqual($xam->localModel, 'Company', "Localmodel is set to " . $xaml->localModel);
+		$this->assertEqual($xam->endpoint, 'Companies');
+		var_dump($entities); die;
 	}
 }

@@ -22,6 +22,11 @@ class XeroAppModel extends AppModel {
 			return false;
 		}
 
+		if (!is_array($organisation) || !isset($organisation['Organisation'])
+			|| !is_array($organisation['Organisation'])) {
+			throw new XeroBadParametersException("XeroAppMode::update expected an Organisation record from the DB");
+		}
+
 		$organisation_id = $organisation['Organisation']['id'];
 
 		if (!isset($this->localModel)) {
@@ -38,6 +43,8 @@ class XeroAppModel extends AppModel {
 		if (!empty($conditions['id'])) {
 			$entities = array();
 			foreach ((array)$conditions['id'] as $id) {
+				// PERFORMANCE: Can we do a single call here to Xero, equivalent of SQL
+				//   WHERE id IN (id1, id2, id3) ?
 				$entities[] = $this->find('first', array('conditions' => $conditions + compact('id')));
 			}
 		} else {
@@ -99,9 +106,13 @@ class XeroAppModel extends AppModel {
 				}
 
 				if (!$model->saveAll($entity)) {
-					throw new Exception(
+					$id = "!UNKNOWN ID!";
+					if (isset($entity[$this->localModel]) && isset($entity[$this->localModel]['id'])) {
+						$id = $entity[$this->localModel]['id'];
+					}
+					throw new XeroIOException(
 						sprintf(
-							"Unable to update invoice (%s): %s", $entity[$this->localModel]['id'], print_r($entity, true)
+							"Unable to update invoice (%s): %s", $id, print_r($entity, true)
 						), E_USER_NOTICE
 					);
 				}
@@ -120,4 +131,20 @@ class XeroAppModel extends AppModel {
 	protected function _setDatasourceCredentialsFromOrganisationId($id) {
 		$this->getDatasource()->credentials(array('organisation_id' => $id));
 	}
+}
+
+
+/**
+ * For structured exception handling, we provide our own exceptions here.
+ */
+class XeroException extends CakeException {
+}
+
+class XeroBadParametersException extends XeroException {
+}
+
+/**
+ * Something went wrong with reading from, or writing to, Xero.
+ */
+class XeroIOException extends XeroException {
 }

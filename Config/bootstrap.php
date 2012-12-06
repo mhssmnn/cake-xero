@@ -16,6 +16,20 @@ ConnectionManager::create('xero_partner', array(
 		'logRequests' => true
 ));
 
+
+/**
+ * Provide a data source to mock Xero.
+ */
+ConnectionManager::create('xero_test', array(
+	'datasource' => 'Xero.XeroTestSource',
+	'persistent' => false,
+	'host' => '127.0.0.1',
+	'login' => 'dev',
+	'password' => '123',
+	'database' => 'dd_tmp',
+	'prefix' => '',
+));
+
 // For checking the API limit
 Cache::config('xero_api_limit', array(
     'engine' => 'File',
