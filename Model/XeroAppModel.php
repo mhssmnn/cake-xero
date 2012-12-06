@@ -57,7 +57,7 @@ class XeroAppModel extends AppModel {
  * @param array $conditions Query conditions
  * @return void
  */
-	private function _parseConditions($organisation_id, &$conditions) {
+	protected function _parseConditions($organisation_id, &$conditions) {
 		if (!empty($conditions['modified_after'])) {
 			if (!isset($this->XeroRequest)) {
 				$this->XeroRequest = ClassRegistry::init('Xero.XeroRequest');
@@ -85,7 +85,7 @@ class XeroAppModel extends AppModel {
  * @param array $entities entity data retrieved from the update.
  * @return void
  */
-	private function _saveAsLocalModel($organisation_id, $entities) {
+	protected function _saveAsLocalModel($organisation_id, $entities) {
 		App::uses($this->localModel, 'Model');
 
 		if (class_exists($this->localModel)) {
@@ -117,7 +117,7 @@ class XeroAppModel extends AppModel {
  * @param string $id The organisation id
  * @return void
  */
-	private function _setDatasourceCredentialsFromOrganisationId($id) {
+	protected function _setDatasourceCredentialsFromOrganisationId($id) {
 		$this->getDatasource()->credentials(array('organisation_id' => $id));
 	}
 }
