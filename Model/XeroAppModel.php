@@ -72,7 +72,7 @@ class XeroAppModel extends AppModel {
 			}
 			
 		}
-		if (!empty($conditions['id']) && is_string($conditions['id']) && strpos(",",$conditions['id']) !== false) {
+		if (!empty($conditions['id']) && is_string($conditions['id']) && strpos($conditions['id'],",") !== false) {
 			$conditions['id'] = explode(',', $conditions['id']);
 		}
 	}
@@ -89,16 +89,18 @@ class XeroAppModel extends AppModel {
 		App::uses($this->localModel, 'Model');
 
 		if (class_exists($this->localModel)) {
-			$model = new $this->localModel;
+			if (!isset($this->{$this->localModel})) {
+				$this->{$this->localModel} = new $this->localModel;
+			}
 			foreach ($entities as $entity) {
 				$localOrgForeignKey = Inflector::underscore(Configure::read('Xero.Organisation.Model')).'_id';
 				$entity[$this->localModel][$localOrgForeignKey] = $organisation_id;
 
-				if (method_exists($model, 'beforeXeroSave')) {
-					$entity = $model->beforeXeroSave($entity);
+				if (method_exists($this->{$this->localModel}, 'beforeXeroSave')) {
+					$entity = $this->{$this->localModel}->beforeXeroSave($entity);
 				}
 
-				if (!$model->saveAll($entity)) {
+				if (!$this->{$this->localModel}->saveAll($entity)) {
 					throw new Exception(
 						sprintf(
 							"Unable to update invoice (%s): %s", $entity[$this->localModel]['id'], print_r($entity, true)
