@@ -10,10 +10,23 @@ class XeroRequest extends XeroAppModel {
 
 	public function lastSuccess($organisation_id, $endpoint = null, $query = null) {
 		$conditions = array('organisation_id' => $organisation_id, 'status' => 'SUCCESS', 'entities !=' => null);
+		return $this->_lastRecordDate($conditions, $endpoint = null, $query = null);
+	}
 
+	public function lastUpdateDate($organisation_id, $endpoint = null, $query = null) {
+		$conditions = array('organisation_id' => $organisation_id, 'status' => 'SUCCESS');
+		return $this->_lastRecordDate($conditions, $endpoint = null, $query = null);
+	}
+
+	protected function _lastRecordDate($conditions, $endpoint = null, $query = null) {
 		if ($endpoint !== null) {
-			if (strpos('api.xro/2.0/', $endpoint) !== 0) {
-				$endpoint = 'api.xro/2.0/'.$endpoint;
+			if (!is_array($endpoint)) {
+				$endpoint = (array) $endpoint;
+			}
+			foreach ($endpoint as &$end) {
+				if (strpos('api.xro/2.0/', $end) !== 0) {
+					$end = 'api.xro/2.0/'.$end;
+				}
 			}
 			$conditions += compact('endpoint');
 		}
