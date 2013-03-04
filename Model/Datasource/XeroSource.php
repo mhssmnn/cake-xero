@@ -182,8 +182,8 @@ class XeroSource extends DataSource {
 		$uri = $AccessToken->consumer->http->url($request['uri']);
 		$params = $AccessToken->consumer->http->config;
 
-		if (!isset($params['request']['header'])) {
-			$params['request']['header'] = array();
+		if (!isset($request['header'])) {
+			$request['header'] = array();
 		}
 
 		// Check if we need to record the start
@@ -192,7 +192,7 @@ class XeroSource extends DataSource {
 		}
 
 		$t = microtime(true);
-		$response = $AccessToken->request($method, $uri, $params['request']['header'], $params, $this->sslRequestOptions());
+		$response = $AccessToken->request($method, $uri, $request['header'], $params, $this->sslRequestOptions());
 		$this->took = round((microtime(true) - $t) * 1000, 0);
 
 		switch ($response->code) {
@@ -610,7 +610,7 @@ class XeroSource extends DataSource {
 		if ($response->code == XeroResponseCode::SUCCESS) {
 			if (is_array($response->body)) {
 				$entities = Set::classicExtract($response->body, '{n}.{s}.id');
-				$entities = implode(",", Set::flatten($entities));
+				$entities = @implode(",", Set::flatten($entities));
 			}
 		} else {
 			CakeLog::write('xero_api_error', "Error:\n".print_r($response, true));

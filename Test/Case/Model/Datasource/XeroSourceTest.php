@@ -353,6 +353,41 @@ class XeroSourceTestCase extends CakeTestCase {
 		$this->assertEquals($result, $expected, "Incorrectly formed request: \n".var_export($result, true));
 	}
 
+	public function testRequestWithModifiedAfter() {
+		$MockConsumer = $this->getMock('XeroConsumer', array(), array(new MockCurlSocket, 'token', 'secret'));
+		$MockAccessToken = $this->getMock('AccessToken', array('request', 'sslRequestOptions'), array($MockConsumer, 'token', 'secret'));
+
+		$uri = 'api.xero/2.0/invoices';
+		$queryData = array('Type == "ACCREC"');
+		$request = array('method' => 'get', 'uri' => array('path' => $uri), 'where' => $queryData, 'header' => array('If-Modified-Since' => '2012-01-01 00:00:00'));
+		
+
+		$MockHttp = $this->getMock('HttpSocket', array('url'));
+		$MockHttp->expects($this->once())->method('url')->will($this->returnValue($uri));
+		$MockHttp->config = array();
+
+		$response = new stdClass();
+		$response->code = '200';
+		$response->body = '';
+
+		$MockAccessToken->consumer->http = $MockHttp;
+		$MockAccessToken->expects($this->once())->method('sslRequestOptions')
+				->will($this->returnValue(array()));
+		$MockAccessToken->expects($this->once())->method('request')
+				->with(
+					'GET', $uri, $request['header'], $MockHttp->config, 
+					$MockAccessToken->sslRequestOptions()
+				)
+				->will($this->returnValue($response));
+
+		$MockXeroSource = $this->getMock('XeroSource', array('credentialsHaveExpired', 'getAccessToken'));
+		$MockXeroSource->expects($this->once())->method('credentialsHaveExpired')->will($this->returnValue(false));
+		$MockXeroSource->expects($this->once())->method('getAccessToken')->will($this->returnValue($MockAccessToken));
+
+		$result = $MockXeroSource->request($request);
+		//$this->assertEquals($result, $expected, "Incorrectly formed request: \n".var_export($result, true));
+	}
+
 	/**
 	 * @expectedException CakeException
 	 */
