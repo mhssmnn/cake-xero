@@ -106,6 +106,23 @@ class XeroAppModelTestCase extends CakeTestCase {
 		$this->assertEqual($conditions, array('id' => array('test_id','test_ids')), 'ID array should be returned as array');
 	}
 
+	public function testParseConditionsAfterFirstUpdate() {
+		$organisation_id = 'test_user';
+		$query = '(Type == "ACCREC") AND (Status == "PAID" OR Status == "VOIDED" OR Status == "DELETED")';
+
+		$conditions = array('id' => '', 'modified_after' => 'last_update', 'Type == "ACCREC"');
+		$conditions[] = 'Status == "PAID" OR Status == "VOIDED" OR Status == "DELETED"';
+
+		$this->XeroAppModel->XeroRequest = $this->getMock('XeroRequest', array('lastSuccess'), array('','','test'));
+		$this->XeroAppModel->endpoint = "Invoices";
+		$this->XeroAppModel->XeroRequest->expects($this->any())->method('lastSuccess')
+			->with($this->equalTo($organisation_id), $this->equalTo("Invoices"), $this->equalTo($query))
+			->will($this->returnValue('2012-12-12 12:12:12'));
+		
+		$this->XeroAppModel->parseConditions($organisation_id, $conditions);
+		$this->assertEqual($conditions, array('id' => '', 'modified_after' => '2012-12-12 12:12:12', 'Type == "ACCREC"', 'Status == "PAID" OR Status == "VOIDED" OR Status == "DELETED"'), 'Should retrieve last updated date from db');
+	}
+
 	public function testSaveAsLocalModelSuccess() {
 		Configure::write('Xero.Organisation.Model', 'User');
 		$organisation_id = 'test_user';

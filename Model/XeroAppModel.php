@@ -69,10 +69,12 @@ class XeroAppModel extends AppModel {
 			}
 			
 			if ($conditions['modified_after'] == 'last_update') {
-				$query = $this->getDatasource()->conditions(array_diff_key(array('id'=>'', 'modified_after'=>''), $conditions));
+				$query = $this->getDatasource()->conditions(array_diff_key($conditions, array('id'=>'', 'modified_after'=>'')));
 				$lastUpdate = $this->XeroRequest->lastSuccess($organisation_id, $this->endpoint, $query);
 				if ($lastUpdate) {
 					$conditions['modified_after'] = $lastUpdate;
+				} else {
+					unset($conditions['modified_after']);
 				}
 			}
 			
