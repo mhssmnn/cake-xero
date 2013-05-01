@@ -50,6 +50,10 @@ class XeroAppModel extends AppModel {
 		}
 
 		$this->_saveAsLocalModel($organisation_id, $entities);
+
+		if (empty($entities)) {
+			return array();
+		}
 		
 		return Set::flatten(Set::classicExtract($entities, "{n}.{s}.id"));
 	}
