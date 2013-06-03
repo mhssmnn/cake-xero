@@ -31,7 +31,7 @@ class XeroRequest extends XeroAppModel {
 			$conditions += compact('endpoint');
 		}
 
-		if ($query !== null) {
+		if (!empty($query)) {
 			$conditions += compact('query');
 		}
 
