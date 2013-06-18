@@ -140,8 +140,10 @@ class XeroUpdateShell extends Shell {
 					'className' => Configure::read('Xero.Organisation.Model')
 				)
 			)));
-			$Organisation =& $this->XeroOrganisation->Organisation;
 		}
+		
+		// Get organisation model from bind
+		$Organisation =& $this->XeroOrganisation->Organisation;
 		
 		$Organisation->contain(array());
 		$conditions = (array) Configure::read('Xero.Organisation.Filter');
