@@ -112,7 +112,7 @@ class XeroAppModel extends AppModel {
 				}
 
 
-				if (!$this->{$this->localModel}->saveAll($entity)) {
+				if (!$this->{$this->localModel}->saveAssociated($entity, array('validate' => false))) {
 					$id = "!UNKNOWN ID!";
 					if (isset($entity[$this->localModel]) && isset($entity[$this->localModel]['id'])) {
 						$id = $entity[$this->localModel]['id'];

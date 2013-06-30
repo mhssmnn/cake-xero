@@ -269,26 +269,34 @@ class XeroSource extends DataSource {
 		}
 
 		// Return CakePHP structured array
+		$entity_id_key = Inflector::underscore($entity).'_id';
 		for($i = 0; $i < count($response->body); $i++) {
-			$response->body[$i] = array($entity => $response->body[$i]);
+			$response->body[$i] = array(
+				$entity => $this->underscorize($response->body[$i], $entity_id_key)
+			);
 		}
 
-		$underscorize = function($arr, $entity) use (&$underscorize) {
-			$rarr = array();
-			$find = array("_i_d", "_u_t_c", Inflector::underscore($entity) . '_id');
-			$repl = array('_id', '_utc', 'id');
-			foreach ($arr as $k => $v) {
-				$_k = $k;
-				if (is_string($k) && !is_array($v)) {
-					$_k = str_replace($find, $repl, Inflector::underscore($k));
-				}
-				$rarr[$_k] = is_array($v) ? $underscorize($v, $_k) : $v;
-			}
-			return $rarr;
-		};
-		$response->body = $underscorize($response->body, $entity);
-
 		return $response;
+	}
+
+/**
+ * Helper function that underscoreizes and cakeizes array keys
+ * @return array $array
+ */
+	private function underscorize($input, $entity) {
+		$return = array();
+    foreach ($input as $key => $value) {
+    	if (is_array($value)) {
+    		$value = $this->underscorize($value, Inflector::underscore($key).'_id');
+    	} elseif (is_string($key)) {
+    		$key = str_replace(
+    			array("_i_d", "_u_t_c", $entity), 
+    			array('_id', '_utc', 'id'), 
+    			Inflector::underscore($key));
+    	}
+    	$return[$key] = $value;
+    }
+    return $return;
 	}
 
 /**
