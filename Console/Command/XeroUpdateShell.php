@@ -125,9 +125,25 @@ class XeroUpdateShell extends Shell {
 	}
 
 /**
+ * Subcommand "organisation" comes here. Runs updates for for an organisation.
+ *
+ * @return void
+ */
+	public function organisations() {
+		try {
+			$conditions = array(
+				'modified_after' => $this->params['since']
+			);
+			$this->XeroOrganisation->update($this->_getOrganisation(), $conditions);
+		} catch (Exception $e) {
+			$this->_updateError($e->getMessage(), $e->getTraceAsString());
+		}
+	}
+
+/**
  * Gets a list of ACTIVE organisations, filtered by the optional
  * organisation parameter.
- * Uses the Configured Organisation.Model to determine the local 
+ * Uses the Configured Organisation.Model to determine the local
  * model that stores the organisations.
  *
  * @return array Names and Ids of the organisations to update.
@@ -141,10 +157,10 @@ class XeroUpdateShell extends Shell {
 				)
 			)));
 		}
-		
+
 		// Get organisation model from bind
 		$Organisation =& $this->XeroOrganisation->Organisation;
-		
+
 		$Organisation->contain(array());
 		$conditions = (array) Configure::read('Xero.Organisation.Filter');
 		if (isset($this->params['organisation']) && $this->params['organisation']) {
@@ -167,7 +183,7 @@ class XeroUpdateShell extends Shell {
 /**
  * Adds an organisation to the CakeResque queue to be processed
  * by workers.
- * 
+ *
  * @return void
  */
 	public function enqueueUpdate($id) {
@@ -188,9 +204,9 @@ class XeroUpdateShell extends Shell {
 /**
  * Returns the current organisation, or retrieves it from the database
  * if it is not there already.
- * NB: we assume that one instance of XeroUpdateShell will always 
+ * NB: we assume that one instance of XeroUpdateShell will always
  * relate to one organisation
- * 
+ *
  * @return array The Organisation
  */
 	private function _getOrganisation() {
@@ -203,13 +219,13 @@ class XeroUpdateShell extends Shell {
 				throw new CakeException(__("Unable to find organisation with id: %s", $this->params['organisation']));
 			}
 		}
-		
+
 		return $this->_organisation;
 	}
 
 /**
  * Logs any error that occurs during an update and the triggers an error
- * 
+ *
  * @return void
  */
 	private function _updateError($errStr, $errTrace) {
@@ -226,7 +242,7 @@ class XeroUpdateShell extends Shell {
 
 /**
  * Returns the option parser
- * 
+ *
  * @return OptionParser
  */
 	public function getOptionParser() {
@@ -245,6 +261,8 @@ class XeroUpdateShell extends Shell {
 				)
 			)
 	  );
+
+	  $organisationArgs = array();
 
 	  $creditNoteArgs = array(
 	  	'options' => array(
@@ -300,6 +318,10 @@ class XeroUpdateShell extends Shell {
 	  	->addSubcommand('contacts', array(
 				'help' => __d('xero_console', 'Updates only contacts.'),
 				'parser' => array_merge_recursive($contactArgs, $genericArgs)
+			))
+	  	->addSubcommand('organisations', array(
+				'help' => __d('xero_console', 'Updates organisational details (i.e. Country Code).'),
+				'parser' => array_merge_recursive($organisationArgs, $genericArgs)
 			))
 	  	->addSubcommand('credit_notes', array(
 				'help' => __d('xero_console', 'Updates only credit notes.'),
