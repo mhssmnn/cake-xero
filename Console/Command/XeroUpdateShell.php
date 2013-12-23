@@ -70,6 +70,10 @@ class XeroUpdateShell extends Shell {
 				'modified_after' => $this->params['since']
 			);
 			$this->XeroContact->update($this->_getOrganisation(), $conditions);
+
+			if ($this->params['fetch_invoices']) {
+				$this->invoices();
+			}
 		} catch (Exception $e) {
 			$this->_updateError($e->getMessage(), $e->getTraceAsString());
 		}
@@ -90,6 +94,11 @@ class XeroUpdateShell extends Shell {
 
 			if ($this->params['paid_only']) {
 				$conditions[] = 'Status == "PAID" OR Status == "VOIDED" OR Status == "DELETED"';
+			}
+
+			if (!empty($this->params['contact'])) {
+				$contact_id = $this->params['contact'];
+				$conditions[] = "Contact.ID == Guid({$contact_id})";
 			}
 
 			$invoices = $this->XeroInvoice->update($this->_getOrganisation(), $conditions);
@@ -281,6 +290,11 @@ class XeroUpdateShell extends Shell {
 					'help' => __d('xero_console', 'Only update specified contacts. (Comma separated list)'),
 					'default' => array()
 				),
+				'fetch_invoices' => array(
+					'help' => __d('xero_console', 'Fetch invoices for contacts?'),
+					'boolean' => true,
+					'default' => false
+				),
 			)
 	  );
 
@@ -290,6 +304,9 @@ class XeroUpdateShell extends Shell {
 					'short' => 'i',
 					'help' => __d('xero_console', 'Only update specified invoices. (Comma separated list)'),
 					'default' => array()
+				),
+				'contact' => array(
+					'help' => __d('xero_console', 'Only update specified contacts invoices.')
 				),
 				'no_line_item' => array(
 					'short' => 'l',
