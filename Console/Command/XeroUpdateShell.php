@@ -206,6 +206,10 @@ class XeroUpdateShell extends Shell {
 			$args[] = '--paid_only';
 		}
 
+		if ($this->params['no_line_item'] === true) {
+			$args[] = '--no_line_item';
+		}
+
 		CakeResque::enqueue('default', 'Xero.XeroUpdate', $args);
 		CakeLog::write('xero_update', __("Queued: %s", $id));
 	}
