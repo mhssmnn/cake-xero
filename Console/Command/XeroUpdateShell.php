@@ -65,10 +65,10 @@ class XeroUpdateShell extends Shell {
  */
 	public function contacts() {
 		try {
-			$conditions = array(
+			$conditions = $this->_conditions(array(
 				'id' => $this->params['contact'],
 				'modified_after' => $this->params['since']
-			);
+			));
 			$this->XeroContact->update($this->_getOrganisation(), $conditions);
 
 			if ($this->params['fetch_invoices']) {
@@ -86,11 +86,11 @@ class XeroUpdateShell extends Shell {
  */
 	public function invoices() {
 		try {
-			$conditions = array(
+			$conditions = $this->_conditions(array(
 				'id' => $this->params['invoice'],
 				'modified_after' => $this->params['since'],
 				'Type == "ACCREC"'
-			);
+			));
 
 			if ($this->params['paid_only']) {
 				$conditions[] = 'Status == "PAID" OR Status == "VOIDED" OR Status == "DELETED"';
@@ -123,10 +123,10 @@ class XeroUpdateShell extends Shell {
  */
 	public function credit_notes() {
 		try {
-			$conditions = array(
+			$conditions = $this->_conditions(array(
 				'id' => $this->params['credit_note'],
 				'modified_after' => $this->params['since']
-			);
+			));
 			$this->XeroCreditNote->update($this->_getOrganisation(), $conditions);
 		} catch (Exception $e) {
 			$this->_updateError($e->getMessage(), $e->getTraceAsString());
@@ -140,9 +140,9 @@ class XeroUpdateShell extends Shell {
  */
 	public function organisations() {
 		try {
-			$conditions = array(
+			$conditions = $this->_conditions(array(
 				'modified_after' => $this->params['since']
-			);
+			));
 			$this->XeroOrganisation->update($this->_getOrganisation(), $conditions);
 		} catch (Exception $e) {
 			$this->_updateError($e->getMessage(), $e->getTraceAsString());
@@ -237,6 +237,18 @@ class XeroUpdateShell extends Shell {
 	}
 
 /**
+ * Helper function that merges conditions passed in with default conditions
+ *
+ * @return array
+ */
+	private function _conditions($conditions) {
+		if (!empty($this->params['conditions'])) {
+			$conditions = array_merge($conditions, (array) $this->params['conditions']);
+		}
+		return $conditions;
+	}
+
+/**
  * Logs any error that occurs during an update and the triggers an error
  *
  * @return void
@@ -267,6 +279,10 @@ class XeroUpdateShell extends Shell {
 					'short' => 's',
 					'help' => __d('xero_console', 'Run updates since specified date and time. (Format: Y-m-d H:i:s)'),
 					'default' => 'last_update'
+				),
+				'conditions' => array(
+					'help' => __d('xero_console', 'Adds additional conditions to request'),
+					'default' => ''
 				),
 				'organisation' => array(
 					'short' => 'c',
