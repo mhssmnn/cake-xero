@@ -99,7 +99,7 @@ class XeroUpdateShell extends Shell {
 
 			if (!empty($this->params['contact'])) {
 				$contact_id = $this->params['contact'];
-				$conditions[] = "Contact.ID == Guid({$contact_id})";
+				$conditions[] = "Contact.ContactID == Guid(\"{$contact_id}\")";
 			}
 
 			$invoices = $this->XeroInvoice->update($this->_getOrganisation(), $conditions);
