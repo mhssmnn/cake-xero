@@ -67,7 +67,8 @@ class XeroUpdateShell extends Shell {
 		try {
 			$conditions = $this->_conditions(array(
 				'id' => $this->params['contact'],
-				'modified_after' => $this->params['since']
+				'modified_after' => $this->params['since'],
+				'includeArchived' => $this->params['include_archived']
 			));
 			$this->XeroContact->update($this->_getOrganisation(), $conditions);
 
@@ -314,6 +315,11 @@ class XeroUpdateShell extends Shell {
 					'help' => __d('xero_console', 'Fetch invoices for contacts?'),
 					'boolean' => true,
 					'default' => false
+				),
+				'include_archived' => array(
+					'help' => __d('xero_console', 'Include archived contacts?'),
+					'boolean' => true,
+					'default' => true
 				),
 			)
 	  );

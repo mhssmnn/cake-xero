@@ -24,7 +24,7 @@ App::uses('Xml', 'Utility');
 	* @package       Xero.Model.Datasource
 	*/
 class XeroSource extends DataSource {
-	
+
 /**
  * Datasource description
  *
@@ -114,7 +114,7 @@ class XeroSource extends DataSource {
 			if (!is_array($id)) {
 				$id = compact('id');
 			}
-			
+
 			$this->credentials = $this->XeroCredential->find('first', array('conditions' => $id));
 		}
 		return $this->credentials;
@@ -136,7 +136,7 @@ class XeroSource extends DataSource {
 	}
 
 /**
- * listSources() is for caching. Will implement caching in own way 
+ * listSources() is for caching. Will implement caching in own way
  * because of Xero as Datasource. So just ``return null``.
  */
 	public function listSources($data = null) {
@@ -244,25 +244,25 @@ class XeroSource extends DataSource {
  */
 	protected function _parseResponse(&$response) {
 		if (!isset($response->body['Response'])) {
-			return $response;	
+			return $response;
 		}
 
 		$response->body = array_diff_key(
 			$response->body['Response'], array_flip(array('Id', 'Status', 'ProviderName', 'DateTimeUTC'))
 		);
-		
+
 		if (empty($response->body)) {
 			return $response;
 		}
 
-		// Get singular entity key, this is used to provide 
+		// Get singular entity key, this is used to provide
 		// a CakePHP style array structure
-		$entity = reset(array_keys(reset($response->body))); 
+		$entity = reset(array_keys(reset($response->body)));
 		// Unwrap plural and singular entity
 		$response->body = reset(reset($response->body));
 
 		// Make sure the array returned is always in the plural form.
-		// If the response is a single entity it wont be. This gets 
+		// If the response is a single entity it wont be. This gets
 		// removed later if the call was made with Model::findFirst
 		if (!isset($response->body[0])) {
 			$response->body = array($response->body);
@@ -290,8 +290,8 @@ class XeroSource extends DataSource {
     		$value = $this->underscorize($value, Inflector::underscore($key).'_id');
     	} elseif (is_string($key)) {
     		$key = str_replace(
-    			array("_i_d", "_u_t_c", $entity), 
-    			array('_id', '_utc', 'id'), 
+    			array("_i_d", "_u_t_c", $entity),
+    			array('_id', '_utc', 'id'),
     			Inflector::underscore($key));
     	}
     	$return[$key] = $value;
@@ -307,14 +307,14 @@ class XeroSource extends DataSource {
 		if (is_string($request)) {
 			$request = array('uri' => array('path' => $request));
 		}
-		
+
 		$request = Set::merge(
-			$this->request, 
+			$this->request,
 			array('ssl' => $this->sslRequestOptions()),
 			$request
 		);
 		$credentials = $this->credentials();
-		
+
 		return $this->consumer()->getAccessToken($request, $credentials);
 	}
 
@@ -324,7 +324,7 @@ class XeroSource extends DataSource {
  */
 	public function getRequestToken($oauth_callback) {
 		$request = Set::merge(
-			$this->request, 
+			$this->request,
 			array('ssl' => $this->sslRequestOptions())
 		);
 		return $this->consumer()->getRequestToken($request, $oauth_callback);
@@ -420,7 +420,7 @@ class XeroSource extends DataSource {
 		}
 
 		if (!empty($queryData['conditions'])) {
-			
+
 			// Any id condition is treated as a Xero endpoint path e.g. one can pass in
 			// a contact's number as the id and it will work for the Contacts endpoint
 			if (isset($queryData['conditions']['id'])) {
@@ -429,11 +429,17 @@ class XeroSource extends DataSource {
 				}
 				unset($queryData['conditions']['id']);
 			}
-			
+
 			// Xero uses the If-Modified-Since header as a special filter
 			if (isset($queryData['conditions']['modified_after'])) {
 				$request['header']['If-Modified-Since'] = $queryData['conditions']['modified_after'];
 				unset($queryData['conditions']['modified_after']);
+			}
+
+			// Xero has a special parameter for Contacts
+			if (isset($queryData['conditions']['includeArchived'])) {
+				$queryData['includeArchived'] = $queryData['conditions']['includeArchived'];
+				unset($queryData['conditions']['includeArchived']);
 			}
 
 		}
@@ -610,7 +616,7 @@ class XeroSource extends DataSource {
 		if (!$this->config['logRequests']) {
 			return;
 		}
-		
+
 		$error = $entities = '';
 		$credentials = $this->credentials();
 		$status = ($response->code != XeroResponseCode::SUCCESS) ? 'FAILED' : 'SUCCESS';
