@@ -627,7 +627,7 @@ class XeroSource extends DataSource {
 				$entities = @implode(",", Set::flatten($entities));
 			}
 		} else {
-			CakeLog::write('xero_api_error', "Error:\n".print_r($response, true));
+			CakeLog::write('xero_api_error', "Error:\n".print_r($request, true) . "\n\n" . print_r($response, true));
 			if (is_array($response->body) && isset($response->body['ApiException'])) {
 				$error = __("%s: %s (%s)", $response->body['ApiException']['Type'], $response->body['ApiException']['Message'], $response->body['ApiException']['ErrorNumber']);
 			} else {

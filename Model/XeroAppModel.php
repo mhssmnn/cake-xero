@@ -11,7 +11,7 @@ class XeroAppModel extends AppModel {
 	);
 
 /**
- * Automagic Update method. Provides a basic update mechanism, to be 
+ * Automagic Update method. Provides a basic update mechanism, to be
  * overloaded where necessary.
  * @param array $organisation The organisation that the update relates to
  * @param array $conditions Optional query conditions
@@ -54,7 +54,7 @@ class XeroAppModel extends AppModel {
 		if (empty($entities)) {
 			return array();
 		}
-		
+
 		return Set::flatten(Set::classicExtract($entities, "{n}.{s}.id"));
 	}
 
@@ -71,7 +71,7 @@ class XeroAppModel extends AppModel {
 			if (!isset($this->XeroRequest)) {
 				$this->XeroRequest = ClassRegistry::init('Xero.XeroRequest');
 			}
-			
+
 			if ($conditions['modified_after'] == 'last_update') {
 				$query = $this->getDatasource()->conditions(array_diff_key($conditions, array('id'=>'', 'modified_after'=>'')));
 				$lastUpdate = $this->XeroRequest->lastSuccess($organisation_id, $this->endpoint, $query);
@@ -81,17 +81,21 @@ class XeroAppModel extends AppModel {
 					unset($conditions['modified_after']);
 				}
 			}
-			
+
 		}
 		if (!empty($conditions['id']) && is_string($conditions['id']) && strpos($conditions['id'],",") !== false) {
 			$conditions['id'] = explode(',', $conditions['id']);
+		}
+
+		if (empty($conditions['id'])) {
+			unset($conditions['id']);
 		}
 	}
 
 /**
  * Saves the retrieved data to a local model (if one exists).
  * Calls the callback method "beforeXeroSave" if it has been implemented.
- * 
+ *
  * @param array $organisation The organisation that the update relates to
  * @param array $entities entity data retrieved from the update.
  * @return void
@@ -125,13 +129,13 @@ class XeroAppModel extends AppModel {
 				}
 			}
 		}
-		
+
 		return true;
 	}
 
 /**
  * Sets the credentials in the datasource.
- * 
+ *
  * @param string $id The organisation id
  * @return void
  */
