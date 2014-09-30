@@ -5,6 +5,8 @@ App::uses('AppModel', 'Model');
 class XeroAppModel extends AppModel {
   public $useDbConfig = 'xero_partner';
 
+  public $excludeFromModifiedAfterQuery = array('id', 'modified_after');
+
 	private $_findMethods = array(
 		'first' => true,
 		'all' => true,
@@ -73,7 +75,8 @@ class XeroAppModel extends AppModel {
 			}
 
 			if ($conditions['modified_after'] == 'last_update') {
-				$query = $this->getDatasource()->conditions(array_diff_key($conditions, array('id'=>'', 'modified_after'=>'')));
+				$exclude = array_flip($this->excludeFromModifiedAfterQuery);
+				$query = $this->getDatasource()->conditions(array_diff_key($conditions, $exclude));
 				$lastUpdate = $this->XeroRequest->lastSuccess($organisation_id, $this->endpoint, $query);
 				if ($lastUpdate) {
 					$conditions['modified_after'] = $lastUpdate;

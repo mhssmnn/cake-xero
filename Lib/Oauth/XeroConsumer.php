@@ -95,8 +95,12 @@ class XeroConsumer extends Consumer {
 
 		$this->options = array_merge($this->__defaultOptions, $params);
 
+		if (!isset($credentials['XeroCredential'])) {
+			throw new CakeException("Unable to create Access Token");
+		}
+
 		$AccessToken = new AccessToken($this, $credentials['XeroCredential']['key'], $credentials['XeroCredential']['secret']);
-		
+
 		if (!$AccessToken) {
 			throw new CakeException("Unable to create Access Token");
 		}
@@ -130,9 +134,9 @@ class XeroConsumer extends Consumer {
 		);
 
 		$this->options = array_merge($this->__defaultOptions, $params);
-		
+
 		$response = $this->tokenRequest(
-			'GET', 
+			'GET',
 			$this->requestTokenUrl(),
 			$token, $requestOptions, $params
 		);
@@ -140,7 +144,7 @@ class XeroConsumer extends Consumer {
 		if (!isset($response['oauth_token']) || !isset($response['oauth_token_secret'])) {
 			return false;
 		}
-		
+
 		return new RequestToken($this, $response['oauth_token'], $response['oauth_token_secret']);
 	}
 

@@ -200,8 +200,8 @@ class XeroSource extends DataSource {
 					$response->body = @Xml::toArray(@Xml::build($response->body));
 			break;
 			case XeroResponseCode::UNAUTHORIZED: // Usually because token has expired
-					if ($depth < 50) {
-						sleep(1);
+					if ($depth < 10) {
+						sleep(2);
 						return $this->request($request, ++$depth);
 					}
 			break;
@@ -336,7 +336,16 @@ class XeroSource extends DataSource {
  */
 	public function renewAccessToken(&$AccessToken) {
 		$token = $this->getAccessToken($AccessToken->consumer->accessTokenUrl());
-		$token = $token->consumer->renewAccessToken($token, $this->sslRequestOptions());
+
+		try {
+			$token = $token->consumer->renewAccessToken($token, $this->sslRequestOptions());
+		} catch(UnauthorizedException $e) {
+			$credentials = $this->credentials();
+			$this->XeroCredential->save(array_merge($credentials['XeroCredential'], array(
+				'session_handle' => 'INVALID',
+			)));
+			throw $e;
+		}
 
 		// Replace current AccessToken with new credentials
 		$AccessToken->token = $token['oauth_token'];
@@ -456,11 +465,15 @@ class XeroSource extends DataSource {
  * @return Array $query
  */
 	protected function _filterQuery($query, Model $model) {
-		$base = array_fill_keys(array('conditions', 'order'), array());
+		$base = array_fill_keys(array('conditions', 'order', 'includeArchived'), array());
 		$query = array_intersect_key((array)$query, $base);
 
 		$query['where'] = $this->conditions($query['conditions']);
 		unset($query['conditions']);
+
+		if (empty($query['where'])) {
+			$query['where'] = array();
+		}
 
 		return $query;
 	}
