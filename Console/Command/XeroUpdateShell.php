@@ -45,6 +45,10 @@ class XeroUpdateShell extends Shell {
 
 		$organisation = reset($organisations);
 		$this->params['organisation'] = $organisation['Organisation']['id'];
+
+		if ($this->params['verbose'] === true) {
+			$this->XeroContact->setVerbose();
+		}
 	}
 
 /**
@@ -64,15 +68,23 @@ class XeroUpdateShell extends Shell {
  * @return void
  */
 	public function contacts() {
+		$this->out(__('Getting contacts'), 1, Shell::VERBOSE);
+
 		try {
 			$conditions = $this->_conditions(array(
 				'id' => $this->params['contact'],
 				'modified_after' => $this->params['since'],
 				'includeArchived' => $this->params['include_archived']
 			));
-			$this->XeroContact->update($this->_getOrganisation(), $conditions);
+			$this->out(__('Contacts conditions: %s', json_encode($conditions)), 1, Shell::VERBOSE);
+
+			$contacts = $this->XeroContact->update($this->_getOrganisation(), $conditions);
+
+			$this->out(__('%s contacts updated', count($contacts)), 1, Shell::VERBOSE);
 
 			if ($this->params['fetch_invoices']) {
+				$this->out(__('Updating contact\'s invoices'), 1, Shell::VERBOSE);
+
 				$this->invoices();
 			}
 		} catch (Exception $e) {
@@ -86,6 +98,8 @@ class XeroUpdateShell extends Shell {
  * @return void
  */
 	public function invoices() {
+		$this->out(__('Getting invoices'), 1, Shell::VERBOSE);
+
 		try {
 			$conditions = $this->_conditions(array(
 				'id' => $this->params['invoice'],
@@ -101,12 +115,17 @@ class XeroUpdateShell extends Shell {
 				$contact_id = $this->params['contact'];
 				$conditions[] = "Contact.ContactID == Guid(\"{$contact_id}\")";
 			}
+			$this->out(__('Invoices conditions: %s', json_encode($conditions)), 1, Shell::VERBOSE);
 
 			$invoices = $this->XeroInvoice->update($this->_getOrganisation(), $conditions);
+
+			$this->out(__('%s invoices updated', count($invoices)), 1, Shell::VERBOSE);
 
 			if (!is_array($invoices) || $this->params['no_line_item']) {
 				return true;
 			}
+
+			$this->out(__('Getting line-items for invoices'), 1, Shell::VERBOSE);
 
 			foreach ($invoices as $invoice_id) {
 				$conditions['id'] = $invoice_id;
@@ -123,12 +142,19 @@ class XeroUpdateShell extends Shell {
  * @return void
  */
 	public function credit_notes() {
+		$this->out(__('Getting credit notes'), 1, Shell::VERBOSE);
+
 		try {
 			$conditions = $this->_conditions(array(
 				'id' => $this->params['credit_note'],
 				'modified_after' => $this->params['since']
 			));
+
+			$this->out(__('Credit note conditions: %s', json_encode($conditions)), 1, Shell::VERBOSE);
+
 			$this->XeroCreditNote->update($this->_getOrganisation(), $conditions);
+
+			$this->out(__('Credit notes updated'), 1, Shell::VERBOSE);
 		} catch (Exception $e) {
 			$this->_updateError($e->getMessage(), $e->getTraceAsString());
 		}
@@ -140,11 +166,17 @@ class XeroUpdateShell extends Shell {
  * @return void
  */
 	public function organisations() {
+		$this->out(__('Getting organisation'), 1, Shell::VERBOSE);
 		try {
 			$conditions = $this->_conditions(array(
 				'modified_after' => $this->params['since']
 			));
+
+			$this->out(__('Organisation conditions: %s', json_encode($conditions)), 1, Shell::VERBOSE);
+
 			$this->XeroOrganisation->update($this->_getOrganisation(), $conditions);
+
+			$this->out(__('Organisation updated'), 1, Shell::VERBOSE);
 		} catch (Exception $e) {
 			$this->_updateError($e->getMessage(), $e->getTraceAsString());
 		}
@@ -174,13 +206,16 @@ class XeroUpdateShell extends Shell {
 		$Organisation->contain(array());
 		$conditions = (array) Configure::read('Xero.Organisation.Filter');
 		if (isset($this->params['organisation']) && $this->params['organisation']) {
-			$conditions += array('id' => $this->params['organisation']);
+			$this->out(__('Filtering organisations with ids %s', $this->params['organisation']), 1, Shell::VERBOSE);
+			$conditions += array('id' => explode(',', $this->params['organisation']));
 		}
 
 		$organisations = $Organisation->find('all', array(
 			'fields' => array('id', 'name'),
 			'conditions' => $conditions
 		));
+
+		$this->out(__('Found %s organisations', count($organisations)), 1, Shell::VERBOSE);
 
 		if (!$organisations && isset($this->params['organisation']) && $this->params['organisation']) {
 			$this->_organisation = array('Organisation' => array('id' => $this->params['organisation']));
@@ -211,7 +246,9 @@ class XeroUpdateShell extends Shell {
 			$args[] = '--no_line_item';
 		}
 
-		CakeResque::enqueue('default', 'Xero.XeroUpdate', $args);
+		$queue = $this->params['queue'] ? $this->params['queue'] : 'default';
+
+		CakeResque::enqueue($queue, 'Xero.XeroUpdate', $args);
 		CakeLog::write('xero_update', __("Queued: %s", $id));
 	}
 
@@ -288,6 +325,10 @@ class XeroUpdateShell extends Shell {
 				'organisation' => array(
 					'short' => 'c',
 					'help' => 'ID of specific organisation to process. Omit to run for all'
+				),
+				'queue' => array(
+					'default' => 'default',
+					'help' => 'Name of the queue to add jobs to (only multiple organisations)'
 				)
 			)
 	  );

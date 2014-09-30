@@ -617,6 +617,7 @@ class XeroSource extends DataSource {
 			return;
 		}
 
+		$verbose = ($this->config['logRequests'] === 'VERBOSE');
 		$error = $entities = '';
 		$credentials = $this->credentials();
 		$status = ($response->code != XeroResponseCode::SUCCESS) ? 'FAILED' : 'SUCCESS';
@@ -633,6 +634,10 @@ class XeroSource extends DataSource {
 			} else {
 				$error = __("%s %s:\n%s", $response->code, $response->reasonPhrase, $response->body);
 			}
+		}
+
+		if ($verbose) {
+			$error = json_encode( compact('request', 'response') );
 		}
 
 		if (!isset($this->XeroRequest)) {

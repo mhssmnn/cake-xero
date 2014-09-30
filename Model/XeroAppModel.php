@@ -142,6 +142,10 @@ class XeroAppModel extends AppModel {
 	protected function _setDatasourceCredentialsFromOrganisationId($id) {
 		$this->getDatasource()->credentials(array('organisation_id' => $id));
 	}
+
+	public function setVerbose() {
+		$this->getDatasource()->config['logRequests'] = 'VERBOSE';
+	}
 }
 
 
